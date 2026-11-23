@@ -2,15 +2,31 @@ pipeline {
     agent any
 
     stages {
-        stage('Check Docker') {
+
+        stage('Build Docker Image') {
             steps {
-                sh 'docker --version'
+                sh 'docker build -t devops-web:$BUILD_NUMBER .'
             }
         }
 
-        stage('Check Container') {
+        stage('Deploy Container') {
             steps {
-                sh 'docker ps'
+                sh '''
+                    docker stop devops-web || true
+                    docker rm devops-web || true
+
+                    docker run -d \
+                    --name devops-web \
+                    --restart unless-stopped \
+                    -p 81:80 \
+                    devops-web:$BUILD_NUMBER
+                '''
+            }
+        }
+
+        stage('Verify Deployment') {
+            steps {
+                sh 'curl -f http://localhost:81'
             }
         }
     }
